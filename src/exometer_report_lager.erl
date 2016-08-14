@@ -56,6 +56,7 @@
     exometer_call/3,
     exometer_report/5,
     exometer_subscribe/5,
+    exometer_report_bulk/3,
     exometer_unsubscribe/4,
     exometer_newentry/2,
     exometer_setopts/4,
@@ -92,6 +93,12 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, St) ->
 exometer_report(Metric, DataPoint, _Extra, Value, #st{level = Level} = St)  ->
     report(Metric, [{DataPoint, Value}], Level),
     {ok, St}.
+
+exometer_report_bulk([{Metric, DataPointList}|Rest], Extra, #st{level = Level} = State) ->
+    report(Metric, DataPointList, Level),
+    exometer_report_bulk(Rest, Extra, State);
+exometer_report_bulk([], _Extra, State) ->
+    {ok, State}.
 
 exometer_call(Unknown, From, St) ->
     ?log(info, "Unknown call ~p from ~p", [Unknown, From]),
