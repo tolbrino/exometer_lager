@@ -129,7 +129,7 @@ name(Metric, DataPoint) ->
 metric_to_string([Final]) ->
     thing_to_list(Final);
 metric_to_string([H | T]) ->
-    thing_to_list(H) ++ "_" ++ metric_to_string(T).
+    thing_to_list(H) ++ "." ++ metric_to_string(T).
 
 thing_to_list(E) when is_atom(E) -> atom_to_list(E);
 thing_to_list(E) when is_list(E) -> E;
