@@ -75,7 +75,7 @@
 %%%===================================================================
 
 exometer_init(Opts) ->
-    ?info("~p(~p): Starting~n", [?MODULE, Opts]),
+    ?log(info, "~p(~p): Starting~n", [?MODULE, Opts]),
     St0 = #st{},
     TypeMap = proplists:get_value(type_map, Opts, St0#st.type_map),
     Level = proplists:get_value(level, Opts, St0#st.level),
@@ -90,7 +90,7 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, St) ->
 %% Invoked through the remote_exometer() function to
 %% send out an update.
 exometer_report(Metric, DataPoint, _Extra, Value, #st{level = Level} = St)  ->
-    ?debug("Report metric ~p_~p = ~p~n", [Metric, DataPoint, Value]),
+    ?log(debug, "Report metric ~p_~p = ~p~n", [Metric, DataPoint, Value]),
     %% Report the value and setup a new refresh timer.
     Str = [?MODULE_STRING, ": ", name(Metric, DataPoint),
            ":", value(Value), $\n],
@@ -98,15 +98,15 @@ exometer_report(Metric, DataPoint, _Extra, Value, #st{level = Level} = St)  ->
     {ok, St}.
 
 exometer_call(Unknown, From, St) ->
-    ?info("Unknown call ~p from ~p", [Unknown, From]),
+    ?log(info, "Unknown call ~p from ~p", [Unknown, From]),
     {ok, St}.
 
 exometer_cast(Unknown, St) ->
-    ?info("Unknown cast: ~p", [Unknown]),
+    ?log(info, "Unknown cast: ~p", [Unknown]),
     {ok, St}.
 
 exometer_info(Unknown, St) ->
-    ?info("Unknown info: ~p", [Unknown]),
+    ?log(info, "Unknown info: ~p", [Unknown]),
     {ok, St}.
 
 exometer_newentry(_Entry, St) ->
