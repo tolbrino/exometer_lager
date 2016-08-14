@@ -90,11 +90,7 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, St) ->
 %% Invoked through the remote_exometer() function to
 %% send out an update.
 exometer_report(Metric, DataPoint, _Extra, Value, #st{level = Level} = St)  ->
-    ?log(debug, "Report metric ~p_~p = ~p~n", [Metric, DataPoint, Value]),
-    %% Report the value and setup a new refresh timer.
-    Str = [?MODULE_STRING, ": ", name(Metric, DataPoint),
-           ":", value(Value), $\n],
-    log(Level, lists:flatten(Str)),
+    report(Metric, [{DataPoint, Value}], Level),
     {ok, St}.
 
 exometer_call(Unknown, From, St) ->
@@ -122,10 +118,6 @@ exometer_terminate(_, _) ->
 %%% Internal functions
 %%%===================================================================
 
-%% Add metric and datapoint within metric
-name(Metric, DataPoint) ->
-    metric_to_string(Metric) ++ "_" ++ thing_to_list(DataPoint).
-
 metric_to_string([Final]) ->
     thing_to_list(Final);
 metric_to_string([H | T]) ->
@@ -144,3 +136,11 @@ value(_) -> "0".
 
 log(Level, String) ->
     lager:log(Level, self(), String).
+
+report(Metric, DataPointList, Level) ->
+    ?log(debug, "Report metric ~p = ~p~n", [Metric, DataPointList]),
+    %% Report the value and setup a new refresh timer.
+    DPStr = [[" ", thing_to_list(DataPoint),"=",value(Value)] ||
+             {DataPoint, Value} <- DataPointList ],
+    Str = [?MODULE_STRING, " ", metric_to_string(Metric), ":", DPStr, $\n],
+    log(Level, lists:flatten(Str)).
