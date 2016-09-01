@@ -56,6 +56,7 @@
     exometer_call/3,
     exometer_report/5,
     exometer_subscribe/5,
+    exometer_report_bulk/3,
     exometer_unsubscribe/4,
     exometer_newentry/2,
     exometer_setopts/4,
@@ -75,7 +76,7 @@
 %%%===================================================================
 
 exometer_init(Opts) ->
-    ?info("~p(~p): Starting~n", [?MODULE, Opts]),
+    ?log(info, "~p(~p): Starting~n", [?MODULE, Opts]),
     St0 = #st{},
     TypeMap = proplists:get_value(type_map, Opts, St0#st.type_map),
     Level = proplists:get_value(level, Opts, St0#st.level),
@@ -90,23 +91,25 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, St) ->
 %% Invoked through the remote_exometer() function to
 %% send out an update.
 exometer_report(Metric, DataPoint, _Extra, Value, #st{level = Level} = St)  ->
-    ?debug("Report metric ~p_~p = ~p~n", [Metric, DataPoint, Value]),
-    %% Report the value and setup a new refresh timer.
-    Str = [?MODULE_STRING, ": ", name(Metric, DataPoint),
-           ":", value(Value), $\n],
-    log(Level, lists:flatten(Str)),
+    report(Metric, [{DataPoint, Value}], Level),
     {ok, St}.
 
+exometer_report_bulk([{Metric, DataPointList}|Rest], Extra, #st{level = Level} = State) ->
+    report(Metric, DataPointList, Level),
+    exometer_report_bulk(Rest, Extra, State);
+exometer_report_bulk([], _Extra, State) ->
+    {ok, State}.
+
 exometer_call(Unknown, From, St) ->
-    ?info("Unknown call ~p from ~p", [Unknown, From]),
+    ?log(info, "Unknown call ~p from ~p", [Unknown, From]),
     {ok, St}.
 
 exometer_cast(Unknown, St) ->
-    ?info("Unknown cast: ~p", [Unknown]),
+    ?log(info, "Unknown cast: ~p", [Unknown]),
     {ok, St}.
 
 exometer_info(Unknown, St) ->
-    ?info("Unknown info: ~p", [Unknown]),
+    ?log(info, "Unknown info: ~p", [Unknown]),
     {ok, St}.
 
 exometer_newentry(_Entry, St) ->
@@ -122,14 +125,10 @@ exometer_terminate(_, _) ->
 %%% Internal functions
 %%%===================================================================
 
-%% Add metric and datapoint within metric
-name(Metric, DataPoint) ->
-    metric_to_string(Metric) ++ "_" ++ thing_to_list(DataPoint).
-
 metric_to_string([Final]) ->
     thing_to_list(Final);
 metric_to_string([H | T]) ->
-    thing_to_list(H) ++ "_" ++ metric_to_string(T).
+    thing_to_list(H) ++ "." ++ metric_to_string(T).
 
 thing_to_list(E) when is_atom(E) -> atom_to_list(E);
 thing_to_list(E) when is_list(E) -> E;
@@ -144,3 +143,11 @@ value(_) -> "0".
 
 log(Level, String) ->
     lager:log(Level, self(), String).
+
+report(Metric, DataPointList, Level) ->
+    ?log(debug, "Report metric ~p = ~p~n", [Metric, DataPointList]),
+    %% Report the value and setup a new refresh timer.
+    DPStr = [[" ", thing_to_list(DataPoint),"=",value(Value)] ||
+             {DataPoint, Value} <- DataPointList ],
+    Str = [?MODULE_STRING, " ", metric_to_string(Metric), ":", DPStr, $\n],
+    log(Level, lists:flatten(Str)).
